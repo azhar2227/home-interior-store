@@ -1,0 +1,10 @@
+/* Additional styles can go here */
+.mobile-view {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .products {
+        grid-template-columns: 1fr;
+    }
+}
