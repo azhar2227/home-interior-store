@@ -281,12 +281,35 @@
             color: #333;
         }
         
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 16px;
+        }
+        
+        /* Image Upload */
+        .image-upload {
+            border: 2px dashed #ddd;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+        
+        .image-upload:hover {
+            border-color: #3498db;
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
         }
         
         /* Admin Dashboard */
@@ -534,10 +557,12 @@
                 <!-- Add Product Form -->
                 <div id="addProductForm" class="product-form">
                     <h3>Add/Edit Product</h3>
+                    
                     <div class="form-group">
                         <label>Product Name:</label>
                         <input type="text" id="productName" placeholder="Enter product name">
                     </div>
+                    
                     <div class="form-group">
                         <label>Category:</label>
                         <select id="productCategory">
@@ -547,26 +572,44 @@
                             <option value="textiles">Textiles</option>
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>Price (₹):</label>
                         <input type="number" id="productPrice" placeholder="Enter price in rupees">
                     </div>
+                    
                     <div class="form-group">
                         <label>Description:</label>
                         <textarea id="productDescription" placeholder="Enter product description"></textarea>
                     </div>
+                    
+                    <!-- IMAGE UPLOAD SECTION -->
                     <div class="form-group">
-                        <label>Image URL:</label>
-                        <input type="text" id="productImage" placeholder="Enter image URL">
+                        <label>Product Image:</label>
+                        
+                        <div class="image-upload" onclick="document.getElementById('imageInput').click()">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #3498db;"></i>
+                            <p>Click to upload image or paste image URL below</p>
+                            <p style="color: #666; font-size: 14px;">Supported: JPG, PNG, WebP</p>
+                        </div>
+                        
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        
+                        <!-- Image Preview -->
+                        <img id="imagePreview" class="image-preview" alt="Image Preview">
+                        
+                        <!-- OR Paste URL -->
+                        <div style="margin-top: 15px;">
+                            <label>Or Paste Image URL:</label>
+                            <input type="text" id="productImage" placeholder="Paste image URL here" onchange="updateImagePreview(this.value)">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>PDF URL:</label>
-                        <input type="text" id="productPDF" placeholder="Enter PDF URL (optional)">
-                    </div>
+                    
                     <div class="form-group">
                         <label>Stock Quantity:</label>
                         <input type="number" id="productStock" value="10">
                     </div>
+                    
                     <button class="btn" onclick="saveProduct()">Save Product</button>
                     <button class="logout-btn" onclick="hideAddProductForm()">Cancel</button>
                 </div>
@@ -638,7 +681,6 @@
                 price: 45999,
                 description: "Premium velvet sofa with wooden frame, perfect for living room",
                 image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-                pdf: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
                 stock: 12
             },
             {
@@ -648,7 +690,6 @@
                 price: 32999,
                 description: "6-seater wooden dining table with glass top",
                 image: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-                pdf: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
                 stock: 8
             },
             {
@@ -658,7 +699,6 @@
                 price: 18999,
                 description: "Beautiful crystal chandelier for living room or dining area",
                 image: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-                pdf: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
                 stock: 5
             },
             {
@@ -668,13 +708,13 @@
                 price: 12999,
                 description: "Premium silk curtains with thermal lining",
                 image: "https://images.unsplash.com/photo-1520851250653-7da2b5a3c2ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-                pdf: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
                 stock: 20
             }
         ];
 
         let currentProductId = null;
         let isEditing = false;
+        let uploadedImage = null;
 
         // ===== PAGE NAVIGATION =====
         function showHome() {
@@ -711,15 +751,64 @@
             window.scrollTo(0, 0);
         }
 
+        // ===== IMAGE HANDLING FUNCTIONS =====
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Check if file is an image
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file (JPG, PNG, etc.)');
+                    return;
+                }
+                
+                // Create a FileReader to read the file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImage = e.target.result; // This is a data URL
+                    updateImagePreview(uploadedImage);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateImagePreview(imageSrc) {
+            const preview = document.getElementById('imagePreview');
+            if (imageSrc) {
+                preview.src = imageSrc;
+                preview.style.display = 'block';
+                uploadedImage = imageSrc;
+            } else {
+                preview.style.display = 'none';
+                uploadedImage = null;
+            }
+        }
+
+        function getDefaultImage(category) {
+            // Default images for each category
+            const defaultImages = {
+                furniture: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+                lighting: "https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+                decor: "https://images.unsplash.com/photo-1519710164239-da123dc03ef4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+                textiles: "https://images.unsplash.com/photo-1520851250653-7da2b5a3c2ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+            };
+            return defaultImages[category] || defaultImages.furniture;
+        }
+
         // ===== PRODUCTS MANAGEMENT =====
         function loadProducts() {
             const productsGrid = document.getElementById('productsGrid');
             productsGrid.innerHTML = '';
             
             products.forEach(product => {
+                // Use product image or default image if not available
+                const imageSrc = product.image || getDefaultImage(product.category);
+                
                 const productCard = `
                     <div class="product-card" data-category="${product.category}">
-                        <img src="${product.image}" alt="${product.name}" class="product-img">
+                        <img src="${imageSrc}" 
+                             alt="${product.name}" 
+                             class="product-img"
+                             onerror="this.src='${getDefaultImage(product.category)}'">
                         <div class="product-info">
                             <h3 class="product-title">${product.name}</h3>
                             <p class="product-desc">${product.description}</p>
@@ -729,7 +818,7 @@
                                 <button class="view-btn" onclick="viewProduct(${product.id})">
                                     <i class="fas fa-eye"></i> View Details
                                 </button>
-                                <button class="pdf-btn" onclick="downloadPDF('${product.pdf}', '${product.name}')">
+                                <button class="pdf-btn" onclick="downloadPDF('${product.name}')">
                                     <i class="fas fa-download"></i> PDF Brochure
                                 </button>
                             </div>
@@ -782,10 +871,8 @@
             }
         }
 
-        function downloadPDF(pdfUrl, productName) {
-            alert(`Downloading PDF brochure for ${productName}...`);
-            // In real implementation, you would trigger download
-            // window.open(pdfUrl, '_blank');
+        function downloadPDF(productName) {
+            alert(`Downloading PDF brochure for ${productName}...\n\nNote: In a real website, this would download the actual PDF file.`);
         }
 
         // ===== ADMIN FUNCTIONS =====
@@ -809,6 +896,11 @@
             document.getElementById('adminPassword').value = '';
             currentProductId = null;
             isEditing = false;
+            uploadedImage = null;
+            // Reset form
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('productImage').value = '';
+            document.getElementById('imageInput').value = '';
         }
 
         function showAddProductForm() {
@@ -818,10 +910,12 @@
             document.getElementById('productPrice').value = '';
             document.getElementById('productDescription').value = '';
             document.getElementById('productImage').value = '';
-            document.getElementById('productPDF').value = '';
             document.getElementById('productStock').value = '10';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('imageInput').value = '';
             currentProductId = null;
             isEditing = false;
+            uploadedImage = null;
         }
 
         function hideAddProductForm() {
@@ -833,12 +927,20 @@
             const category = document.getElementById('productCategory').value;
             const price = parseInt(document.getElementById('productPrice').value);
             const description = document.getElementById('productDescription').value;
-            const image = document.getElementById('productImage').value;
-            const pdf = document.getElementById('productPDF').value;
             const stock = parseInt(document.getElementById('productStock').value);
             
-            if (!name || !price || !description || !image) {
-                alert('Please fill all required fields!');
+            // Get image - priority: uploaded image > URL input > default image
+            let imageSrc = '';
+            if (uploadedImage) {
+                imageSrc = uploadedImage; // Data URL from upload
+            } else if (document.getElementById('productImage').value) {
+                imageSrc = document.getElementById('productImage').value; // URL input
+            } else {
+                imageSrc = getDefaultImage(category); // Default based on category
+            }
+            
+            if (!name || !price || !description) {
+                alert('Please fill all required fields (Name, Price, Description)!');
                 return;
             }
             
@@ -852,8 +954,7 @@
                         category,
                         price,
                         description,
-                        image,
-                        pdf: pdf || products[index].pdf,
+                        image: imageSrc,
                         stock
                     };
                 }
@@ -867,8 +968,7 @@
                     category,
                     price,
                     description,
-                    image,
-                    pdf: pdf || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+                    image: imageSrc,
                     stock
                 };
                 products.push(newProduct);
@@ -889,9 +989,16 @@
             table.innerHTML = '';
             
             products.forEach(product => {
+                const imageSrc = product.image || getDefaultImage(product.category);
                 const row = `
                     <tr>
-                        <td><img src="${product.image}" width="50" height="50" style="object-fit: cover; border-radius: 5px;"></td>
+                        <td>
+                            <img src="${imageSrc}" 
+                                 width="50" 
+                                 height="50" 
+                                 style="object-fit: cover; border-radius: 5px;"
+                                 onerror="this.src='${getDefaultImage(product.category)}'">
+                        </td>
                         <td>${product.name}</td>
                         <td>${product.category}</td>
                         <td>₹${product.price.toLocaleString()}</td>
@@ -917,9 +1024,15 @@
                 document.getElementById('productCategory').value = product.category;
                 document.getElementById('productPrice').value = product.price;
                 document.getElementById('productDescription').value = product.description;
-                document.getElementById('productImage').value = product.image;
-                document.getElementById('productPDF').value = product.pdf;
                 document.getElementById('productStock').value = product.stock;
+                
+                // Set image preview
+                if (product.image) {
+                    document.getElementById('imagePreview').src = product.image;
+                    document.getElementById('imagePreview').style.display = 'block';
+                    document.getElementById('productImage').value = product.image.startsWith('http') ? product.image : '';
+                    uploadedImage = product.image;
+                }
                 
                 currentProductId = id;
                 isEditing = true;
@@ -963,7 +1076,42 @@
             
             // Show home page by default
             showHome();
+            
+            // Add sample images button for testing
+            addSampleImagesButton();
         });
+
+        // Add button to paste sample image URLs
+        function addSampleImagesButton() {
+            const adminPanel = document.getElementById('adminPanel');
+            const sampleImagesBtn = document.createElement('div');
+            sampleImagesBtn.innerHTML = `
+                <button onclick="showSampleImages()" 
+                        style="position: fixed; bottom: 20px; right: 20px; background: #3498db; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; z-index: 1000;">
+                    <i class="fas fa-images"></i> Sample Images
+                </button>
+            `;
+            adminPanel.appendChild(sampleImagesBtn);
+        }
+
+        function showSampleImages() {
+            const sampleImages = [
+                "Furniture: https://images.unsplash.com/photo-1555041469-a586c61ea9bc",
+                "Dining Table: https://images.unsplash.com/photo-1586023492125-27b2c045efd7",
+                "Chandelier: https://images.unsplash.com/photo-1513506003901-1e6a229e2d15",
+                "Curtains: https://images.unsplash.com/photo-1520851250653-7da2b5a3c2ab",
+                "Sofa: https://images.unsplash.com/photo-1540574163026-643ea20ade25",
+                "Bed: https://images.unsplash.com/photo-1505693416388-ac5ce068fe85"
+            ];
+            
+            let message = "Copy these URLs and paste in Image URL field:\n\n";
+            sampleImages.forEach(img => {
+                message += `• ${img}\n`;
+            });
+            message += "\nTips:\n1. Click on the link\n2. Copy image address\n3. Paste in URL field";
+            
+            alert(message);
+        }
 
         // ===== HELPER FUNCTIONS =====
         function formatCurrency(amount) {
